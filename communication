@@ -1,0 +1,47 @@
+
+á
+communication.proto"Ð
+CompressorSettings
+compressorId (
+pidSetpoint (
+pidP (
+pidI (
+pidD (
+requestedHotWaterTemp (
+heatingHysteresis (
+requestedCoolWaterTemp (
+coolingHysteresis	 (
+pidSensorAddr
+ (
+hotWaterSensorAddr (
+coolingStartSensorAddr (
+coolingStopSensorAddr ("ñ
+CompressorInfo
+compressorId (
+state_water_heating (
+state_room_heating (
+state_cooling (
+compressorRun (
+panicColdStopActive (
+panicHotStopActive (
+maintainceStop (
+	pidOutput	 (",
+TempInfo
+
+SensorAddr (
+Temp ("†
+PIDInfo
+compressorId (
+
+In (
+Out (	
+P (	
+I (	
+D (
+dispP (
+dispI (
+dispD	 ("L
+FlowInfo
+sensorId (
+LitersPerSecond (
+absoluteValue (
