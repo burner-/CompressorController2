@@ -316,7 +316,7 @@ void doLogic(byte addr[8], float tempVal)
       warmWaterStopSensor = tempVal;
       if (settings.warmWaterStopTemp < tempVal)
       {
-        logMsg(7,F("Warming temp higher than warmWaterStartTemp"));
+        logMsg(7,F("Warming temp higher than warmWaterStopTemp"));
         StopWarming();
       }
     }
