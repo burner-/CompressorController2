@@ -141,10 +141,9 @@ void netRecvProtoBuffTempInfo(byte packetBuffer[], int packetSize )
 
 void readEthernet()
 {
-  while(Udp.available()){
 	//Process ethernet
 	int packetSize = Udp.parsePacket();
-	if(packetSize)
+	while(packetSize)
 	{
 		//DBG_OUTPUT_PORT.print(F("Received udp packet of size "));
 		//DBG_OUTPUT_PORT.println(packetSize);
@@ -163,11 +162,11 @@ void readEthernet()
 		DBG_OUTPUT_PORT.print(Udp.remotePort());
 		
 		int messagetype = Udp.read();
-		
+		/*
 		DBG_OUTPUT_PORT.print("  ");
 		dumpType(messagetype);
     DBG_OUTPUT_PORT.println();
-    
+    */
 		byte packetBuffer[UDP_TX_PACKET_MAX_SIZE - 1];
 		Udp.read(packetBuffer,UDP_TX_PACKET_MAX_SIZE - 1);
 		
@@ -180,8 +179,9 @@ void readEthernet()
 		{
 			netRecvProtoBuffTempInfo(packetBuffer, (packetSize -1));
 		}
+   packetSize = Udp.parsePacket();
 	}
-  }
+  
 }
 
 
@@ -420,6 +420,8 @@ void readAllTempSensors()
         
       }
     }
+    // send periodic update of compressor status
+    pbSendCompressorInfo();
 }
 
 
@@ -445,6 +447,10 @@ boolean ByteArrayCompare(byte a[], byte b[], int array_size)
 
 void updateSensorInfo(byte address[8], float curTemp, bool local)
 {
+   hexPrintArray(address,8);
+  DBG_OUTPUT_PORT.print("\t");
+  DBG_OUTPUT_PORT.println(curTemp);
+  
   SensorInfo *sensor;
   for (int i = 0; i < sensors.size(); i++)
   {
@@ -472,6 +478,8 @@ void updateSensorInfo(byte address[8], float curTemp, bool local)
 
 void searchAllTempSensors()
 {
+  DBG_OUTPUT_PORT.println("Searching sensors");
+
   int count = 0;
   doJob();
   ds.reset_search();
@@ -504,9 +512,11 @@ void searchAllTempSensors()
       DBG_OUTPUT_PORT.println(F(" Address CRC is not valid!"));
     }
   }
-  DBG_OUTPUT_PORT.print("All ");
-  DBG_OUTPUT_PORT.print(count);
-  DBG_OUTPUT_PORT.println(F(" sensors found"));
+  String str = "All ";
+  str += count;
+  str += F(" sensors found");
+  DBG_OUTPUT_PORT.println(str);
+  
 }
 void wwwSearchAllTempSernsors ()
 {
@@ -528,6 +538,7 @@ void InitWebserver()
   server.on("/metrics", handle_prometheus);
   server.on("/tempsensors", handle_all_sensors);
   server.on("/tempsensors/all", handle_all_sensors);
+  server.on("/tempsensors/flush", wwwSearchAllTempSernsors);
   server.on("/tempsensors/local", handle_local_sensors);
   server.on("/tempsensors/update", searchAllTempSensors);
   
@@ -549,7 +560,7 @@ void setup()
   
   InitWebserver();
   
-  Udp.begin(localPort);
+  Udp.begin(UDP_PORT);
   DBG_OUTPUT_PORT.println(F("Ethernet up")); 
   pid.SetTunings(settings.pidP,settings.pidI,settings.pidD);
   
@@ -562,18 +573,20 @@ void setup()
 //  PrintSettings();
   //DBG_OUTPUT_PORT.println(F("To set system id press s"));
   Syslog.setLoghost(loghost,Udp);
+//  Syslog.setLoghost(loghost);
+  
   //Syslog.setLoghost(loghost);
-  initLogic();
-  searchAllTempSensors();
   logMsg(5,F("Controller started"));
+  initLogic();
+  pbSendCompressorInfo();
+  searchAllTempSensors();
+  logMsg(5,F("Controller ready"));
   t.every(10000, ShowSockStatus);
   t.every(5000, readAllTempSensors); // read all known sensors at each 5 seconds
 }
 
-
 void loop()
 {
-  
   //readDBG_OUTPUT_PORT();
   // Read next onewire sensor and send values
   //readOnewireAndSendValues();
@@ -662,7 +675,7 @@ void handle_local_sensors()
 }
 void handle_sensors(bool all)
 {
-   int exceptedSize = (sensors.size() * 48) + 2;
+   int exceptedSize = (sensors.size() * 78) + 2;
  int sentSize = 0;
  server.setContentLength(exceptedSize);
  server.send(200, "text/plain", "[");
@@ -671,16 +684,20 @@ void handle_sensors(bool all)
  String retbuf = "";
   for (int i = 0; i < sensors.size(); i++)
   {
-    if (all && sensor->local)
+    sensor = sensors.get(i);    
+    if (all || sensor->local)
     {
      retbuf = "";
-     sensor = sensors.get(i);
      String sensorAddr;
      getHexString(sensor->SensorAddress, sensorAddr);
      retbuf+="{\"address\": \"";
      retbuf+=sensorAddr;
      retbuf+="\", \"temp\": ";
      retbuf+=sensor->Temperature;
+     
+     retbuf+="\", \"local\": ";
+     retbuf+=sensor->local;
+     
      retbuf+="}";
      if (i + 1 < sensors.size())
         retbuf+=",\n";
@@ -691,10 +708,11 @@ void handle_sensors(bool all)
 
  retbuf = "]";
  sentSize++;
- while(exceptedSize>sentSize){
+ while(exceptedSize>sentSize)
+ {
   retbuf += "\n";
   sentSize++;
-  }
+ }
  server.sendContent(retbuf);
 }
 

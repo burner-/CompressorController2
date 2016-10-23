@@ -325,6 +325,9 @@ void doLogic(byte addr[8], float tempVal)
 void initLogic(){
   pinMode(PIN_COMPRESSOR_RUN, OUTPUT);
   pinMode(PIN_FLOW_VALVE, OUTPUT);
+  digitalWrite(PIN_FLOW_VALVE, HIGH);
+  digitalWrite(PIN_COMPRESSOR_RUN, HIGH);
+
 }
 
 

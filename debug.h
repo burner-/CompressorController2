@@ -2,7 +2,7 @@
 #include <utility/w5100.h>
 void SendSyslog(uint8_t loglevel, const char message[])
 {
-  Syslog.logger(1,loglevel,HOSTNAME, message);
+ Syslog.logger(1,loglevel,HOSTNAME, message);
 }
 void SendSyslog(uint8_t loglevel, const __FlashStringHelper *ifsh)
 {
